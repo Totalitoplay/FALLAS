@@ -56,22 +56,27 @@ function ejecutarLocalizacion(textoBruto) {
     const encontrados = textoBruto.match(regex);
     const cuentasUnicas = encontrados ? [...new Set(encontrados)] : [];
     
-    if (cuentasUnicas.length === 0) return alert("No se encontraron números de cuenta.");
+    if (cuentasUnicas.length === 0) return alert("No se encontraron cuentas.");
 
     resultadosActuales = [];
+    let conteoQR = {}; // Objeto para contar repetidos
 
     cuentasUnicas.forEach(cuentaBuscada => {
         const buscar = cuentaBuscada.replace(/^0+/, '');
         const fila = inventarioMap.get(buscar);
 
         if (fila) {
+            const qr = (fila[6] || "SIN QR").trim().toUpperCase();
             resultadosActuales.push({
                 cuenta: cuentaBuscada,
-                qr: (fila[6] || "SIN QR").trim().toUpperCase(),
+                qr: qr,
                 lat: (fila[16] || "").replace(/"/g, "").trim(),
                 lon: (fila[17] || "").replace(/"/g, "").trim(),
                 encontrado: true
             });
+
+            // Lógica de conteo
+            conteoQR[qr] = (conteoQR[qr] || 0) + 1;
         } else {
             resultadosActuales.push({
                 cuenta: cuentaBuscada,
@@ -81,8 +86,31 @@ function ejecutarLocalizacion(textoBruto) {
         }
     });
 
+    // Mostrar el resumen de los más repetidos
+    mostrarResumen(conteoQR);
+
     resultadosActuales.sort((a, b) => a.qr.localeCompare(b.qr, undefined, {numeric: true}));
     renderizarTabla(resultadosActuales);
+}
+
+function mostrarResumen(conteo) {
+    const contenedorStats = document.getElementById('summaryStats');
+    const contenido = document.getElementById('statsContent');
+    
+    // Convertir el objeto a una lista y ordenar por los más repetidos
+    const ordenados = Object.entries(conteo).sort((a, b) => b[1] - a[1]);
+
+    if (ordenados.length > 0) {
+        contenedorStats.style.display = "block";
+        contenido.innerHTML = ordenados.map(([qr, total]) => `
+            <div style="background: #f1f5f9; padding: 10px; border-radius: 8px; border-left: 4px solid #2563eb;">
+                <span style="font-size: 11px; font-weight: bold; color: #64748b;">${qr}</span>
+                <div style="font-size: 18px; font-weight: 700; color: #1e293b;">${total} <small style="font-size: 10px;">ctes</small></div>
+            </div>
+        `).join('');
+    } else {
+        contenedorStats.style.display = "none";
+    }
 }
 
 function renderizarTabla(datos) {
@@ -119,4 +147,12 @@ function ordenarTabla(columnaIndex) {
         return ordenAscendente ? valA.localeCompare(valB, undefined, {numeric: true}) : valB.localeCompare(valA, undefined, {numeric: true});
     });
     renderizarTabla(resultadosActuales);
+}
+function limpiarTodo() {
+    document.getElementById('reportInput').value = "";
+    document.getElementById('clientCsvFile').value = "";
+    document.getElementById('summaryStats').style.display = "none";
+    document.querySelector("#resultTable tbody").innerHTML = "";
+    resultadosActuales = [];
+    console.log("Panel limpiado.");
 }
