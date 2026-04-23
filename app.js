@@ -1,7 +1,7 @@
 let inventarioMap = new Map();
 let resultadosActuales = []; 
 let ordenAscendente = true;
-
+ 
 // 1. CARGA DEL INVENTARIO (CSV)
 window.onload = async function() {
     try {
