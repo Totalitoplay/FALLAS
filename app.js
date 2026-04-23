@@ -97,17 +97,34 @@ function mostrarResumen(conteo) {
     const contenedorStats = document.getElementById('summaryStats');
     const contenido = document.getElementById('statsContent');
     
-    // Convertir el objeto a una lista y ordenar por los más repetidos
     const ordenados = Object.entries(conteo).sort((a, b) => b[1] - a[1]);
 
     if (ordenados.length > 0) {
         contenedorStats.style.display = "block";
-        contenido.innerHTML = ordenados.map(([qr, total]) => `
-            <div style="background: #f1f5f9; padding: 10px; border-radius: 8px; border-left: 4px solid #2563eb;">
-                <span style="font-size: 11px; font-weight: bold; color: #64748b;">${qr}</span>
-                <div style="font-size: 18px; font-weight: 700; color: #1e293b;">${total} <small style="font-size: 10px;">ctes</small></div>
-            </div>
-        `).join('');
+        
+        contenido.innerHTML = ordenados.map(([qr, total]) => {
+            // Buscamos las coordenadas de este QR usando el primer resultado que lo contenga
+            const datoCualquiera = resultadosActuales.find(r => r.qr === qr && r.encontrado);
+            const linkMapa = datoCualquiera 
+                ? `https://www.google.com/maps/search/?api=1&query=${datoCualquiera.lat},${datoCualquiera.lon}`
+                : "#";
+
+            return `
+                <div style="background: #f1f5f9; padding: 12px; border-radius: 8px; border-left: 4px solid #2563eb; position: relative;">
+                    <a href="${linkMapa}" target="_blank" style="text-decoration: none; display: block;">
+                        <span style="font-size: 10px; font-weight: bold; color: #2563eb; display: block; margin-bottom: 4px;">
+                            📍 ABRIR MAPA
+                        </span>
+                        <span style="font-size: 12px; font-weight: bold; color: #1e293b; display: block; border-bottom: 1px dashed #cbd5e1; padding-bottom: 4px; margin-bottom: 4px;">
+                            ${qr}
+                        </span>
+                        <div style="font-size: 20px; font-weight: 700; color: #1e293b;">
+                            ${total} <small style="font-size: 10px; color: #64748b;">ctes</small>
+                        </div>
+                    </a>
+                </div>
+            `;
+        }).join('');
     } else {
         contenedorStats.style.display = "none";
     }
