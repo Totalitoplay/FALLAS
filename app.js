@@ -2,9 +2,10 @@ let inventarioMap = new Map();
 let resultadosActuales = []; 
 let ordenAscendente = true;
 
+// 1. CARGA DEL INVENTARIO (CSV)
 window.onload = async function() {
     try {
-        const respuesta = await fetch('inventario.csv');
+        const respuesta = await fetch('inventario.csv?v=' + Date.now());
         const contenido = await respuesta.text();
         const lineas = contenido.split(/\r?\n/);
         
@@ -17,19 +18,51 @@ window.onload = async function() {
                 inventarioMap.set(cuentaLimpia, columnas);
             }
         });
-        console.log("Inventario cargado correctamente.");
+        console.log("✅ Inventario cargado correctamente.");
     } catch (e) { 
-        console.error("Error al cargar el CSV:", e); 
+        console.error("❌ Error al cargar el CSV:", e); 
     }
 };
 
-function buscarCuentas() {
-    const texto = document.getElementById('reportInput').value;
+// 2. LÓGICA DE PROCESAMIENTO (ARCHIVO O TEXTO)
+async function procesarBusqueda() {
+    const fileInput = document.getElementById('clientCsvFile');
+    const textArea = document.getElementById('reportInput');
+    const btn = document.getElementById('btnBuscar');
+    
+    btn.innerText = "Procesando...";
+    btn.disabled = true;
+
+    if (fileInput.files.length > 0) {
+        const archivo = fileInput.files[0];
+        const lector = new FileReader();
+        lector.onload = function(e) {
+            ejecutarLocalizacion(e.target.result);
+            btn.innerText = "🔍 Localizar QRs";
+            btn.disabled = false;
+            fileInput.value = ""; // Limpiar input para siguiente carga
+        };
+        lector.readAsText(archivo);
+    } else if (textArea.value.trim() !== "") {
+        ejecutarLocalizacion(textArea.value);
+        btn.innerText = "🔍 Localizar QRs";
+        btn.disabled = false;
+    } else {
+        alert("Por favor, sube un archivo o pega el reporte de clientes.");
+        btn.innerText = "🔍 Localizar QRs";
+        btn.disabled = false;
+    }
+}
+
+// 3. CRUCE DE DATOS
+function ejecutarLocalizacion(textoBruto) {
     const regex = /\d{10}/g; 
-    const encontrados = texto.match(regex);
+    const encontrados = textoBruto.match(regex);
     const cuentasUnicas = encontrados ? [...new Set(encontrados)] : [];
     
-    resultadosActuales = []; 
+    if (cuentasUnicas.length === 0) return alert("No se encontraron cuentas de 10 dígitos.");
+
+    resultadosActuales = [];
 
     cuentasUnicas.forEach(cuentaBuscada => {
         const buscar = cuentaBuscada.replace(/^0+/, '');
@@ -39,8 +72,8 @@ function buscarCuentas() {
             resultadosActuales.push({
                 cuenta: cuentaBuscada,
                 qr: (fila[6] || "SIN QR").trim().toUpperCase(),
-                lat: fila[16] || "",
-                lon: fila[17] || "",
+                lat: (fila[16] || "").replace(/"/g, "").trim(),
+                lon: (fila[17] || "").replace(/"/g, "").trim(),
                 encontrado: true
             });
         } else {
@@ -52,40 +85,45 @@ function buscarCuentas() {
         }
     });
 
+    // Orden inicial automático por QR
+    resultadosActuales.sort((a, b) => a.qr.localeCompare(b.qr, undefined, {numeric: true}));
     renderizarTabla(resultadosActuales);
 }
 
+// 4. DIBUJAR TABLA (RESPONSIVA)
 function renderizarTabla(datos) {
     const tbody = document.querySelector("#resultTable tbody");
     let html = "";
 
     datos.forEach(res => {
         if (res.encontrado) {
-            // URL CORREGIDA: Sin el '2{' que sobraba
             const urlMaps = `https://www.google.com/maps/search/?api=1&query=${res.lat},${res.lon}`;
             html += `
                 <tr>
-                    <td><b>${res.cuenta}</b></td>
-                    <td style="color:#d35400; font-weight:bold; background:#fff8f0;">${res.qr}</td>
-                    <td style="font-size: 11px;">${res.lat}, ${res.lon}</td>
-                    <td><a href="${urlMaps}" target="_blank" style="background:#27ae60; color:white; padding:4px 8px; text-decoration:none; border-radius:4px; font-size:11px;">📍 Ver Mapa</a></td>
+                    <td data-label="CUENTA"><b>${res.cuenta}</b></td>
+                    <td data-label="QR"><span class="qr-badge">${res.qr}</span></td>
+                    <td data-label="COORD" style="font-size:10px; color:#64748b;">${res.lat}, ${res.lon}</td>
+                    <td data-label="ACCIÓN"><a href="${urlMaps}" target="_blank" class="btn-mapa">📍 Abrir Mapa</a></td>
                 </tr>`;
         } else {
-            html += `<tr style="background:#fff5f5; color:#c0392b;"><td>${res.cuenta}</td><td colspan="3" style="font-size:11px; font-style:italic;">No encontrada</td></tr>`;
+            html += `
+                <tr class="no-encontrada">
+                    <td data-label="CUENTA">${res.cuenta}</td>
+                    <td colspan="3" style="font-size:11px; font-style:italic;">No encontrada en Inventario</td>
+                </tr>`;
         }
     });
     tbody.innerHTML = html;
 }
 
+// 5. ORDENAR AL CLIC (FILTRO EXCEL)
 function ordenarTabla(columnaIndex) {
     if (resultadosActuales.length === 0) return;
-    
     ordenAscendente = !ordenAscendente;
     
     resultadosActuales.sort((a, b) => {
         let valA = columnaIndex === 0 ? a.cuenta : a.qr;
         let valB = columnaIndex === 0 ? b.cuenta : b.qr;
-
         return ordenAscendente 
             ? valA.localeCompare(valB, undefined, {numeric: true}) 
             : valB.localeCompare(valA, undefined, {numeric: true});
