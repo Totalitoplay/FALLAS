@@ -1,8 +1,7 @@
 let inventarioMap = new Map();
 let resultadosActuales = []; 
 let ordenAscendente = true;
- 
-// 1. CARGA DEL INVENTARIO (CSV)
+
 window.onload = async function() {
     try {
         const respuesta = await fetch('inventario.csv?v=' + Date.now());
@@ -18,13 +17,12 @@ window.onload = async function() {
                 inventarioMap.set(cuentaLimpia, columnas);
             }
         });
-        console.log("✅ Inventario cargado correctamente.");
+        console.log("Inventario cargado correctamente.");
     } catch (e) { 
-        console.error("❌ Error al cargar el CSV:", e); 
+        console.error("Error al cargar el CSV:", e); 
     }
 };
 
-// 2. LÓGICA DE PROCESAMIENTO (ARCHIVO O TEXTO)
 async function procesarBusqueda() {
     const fileInput = document.getElementById('clientCsvFile');
     const textArea = document.getElementById('reportInput');
@@ -33,34 +31,32 @@ async function procesarBusqueda() {
     btn.innerText = "Procesando...";
     btn.disabled = true;
 
-    if (fileInput.files.length > 0) {
+    if (fileInput && fileInput.files.length > 0) {
         const archivo = fileInput.files[0];
         const lector = new FileReader();
         lector.onload = function(e) {
             ejecutarLocalizacion(e.target.result);
-            btn.innerText = "🔍 Localizar QRs";
+            btn.innerHTML = "🔍 Localizar QRs";
             btn.disabled = false;
-            fileInput.value = ""; // Limpiar input para siguiente carga
         };
         lector.readAsText(archivo);
-    } else if (textArea.value.trim() !== "") {
+    } else if (textArea && textArea.value.trim() !== "") {
         ejecutarLocalizacion(textArea.value);
-        btn.innerText = "🔍 Localizar QRs";
+        btn.innerHTML = "🔍 Localizar QRs";
         btn.disabled = false;
     } else {
         alert("Por favor, sube un archivo o pega el reporte de clientes.");
-        btn.innerText = "🔍 Localizar QRs";
+        btn.innerHTML = "🔍 Localizar QRs";
         btn.disabled = false;
     }
 }
 
-// 3. CRUCE DE DATOS
 function ejecutarLocalizacion(textoBruto) {
     const regex = /\d{10}/g; 
     const encontrados = textoBruto.match(regex);
     const cuentasUnicas = encontrados ? [...new Set(encontrados)] : [];
     
-    if (cuentasUnicas.length === 0) return alert("No se encontraron cuentas de 10 dígitos.");
+    if (cuentasUnicas.length === 0) return alert("No se encontraron números de cuenta.");
 
     resultadosActuales = [];
 
@@ -85,12 +81,10 @@ function ejecutarLocalizacion(textoBruto) {
         }
     });
 
-    // Orden inicial automático por QR
     resultadosActuales.sort((a, b) => a.qr.localeCompare(b.qr, undefined, {numeric: true}));
     renderizarTabla(resultadosActuales);
 }
 
-// 4. DIBUJAR TABLA (RESPONSIVA)
 function renderizarTabla(datos) {
     const tbody = document.querySelector("#resultTable tbody");
     let html = "";
@@ -102,32 +96,27 @@ function renderizarTabla(datos) {
                 <tr>
                     <td data-label="CUENTA"><b>${res.cuenta}</b></td>
                     <td data-label="QR"><span class="qr-badge">${res.qr}</span></td>
-                    <td data-label="COORD" style="font-size:10px; color:#64748b;">${res.lat}, ${res.lon}</td>
-                    <td data-label="ACCIÓN"><a href="${urlMaps}" target="_blank" class="btn-mapa">📍 Abrir Mapa</a></td>
+                    <td data-label="COORD" style="font-size:10px;">${res.lat}, ${res.lon}</td>
+                    <td data-label="ACCIÓN"><a href="${urlMaps}" target="_blank" class="btn-mapa">📍 Mapa</a></td>
                 </tr>`;
         } else {
             html += `
                 <tr class="no-encontrada">
                     <td data-label="CUENTA">${res.cuenta}</td>
-                    <td colspan="3" style="font-size:11px; font-style:italic;">No encontrada en Inventario</td>
+                    <td colspan="3">No encontrada en Inventario</td>
                 </tr>`;
         }
     });
     tbody.innerHTML = html;
 }
 
-// 5. ORDENAR AL CLIC (FILTRO EXCEL)
 function ordenarTabla(columnaIndex) {
     if (resultadosActuales.length === 0) return;
     ordenAscendente = !ordenAscendente;
-    
     resultadosActuales.sort((a, b) => {
         let valA = columnaIndex === 0 ? a.cuenta : a.qr;
         let valB = columnaIndex === 0 ? b.cuenta : b.qr;
-        return ordenAscendente 
-            ? valA.localeCompare(valB, undefined, {numeric: true}) 
-            : valB.localeCompare(valA, undefined, {numeric: true});
+        return ordenAscendente ? valA.localeCompare(valB, undefined, {numeric: true}) : valB.localeCompare(valA, undefined, {numeric: true});
     });
-
     renderizarTabla(resultadosActuales);
 }
