@@ -2,7 +2,8 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>R3 Scripts - Localizador de QR</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>R3 Scripts</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -13,11 +14,20 @@
         <input type="file" id="csvFile" accept=".csv">
     </div>
 
-    <div class="input-section">
-        <label>2. Pegar Reporte de Fallas:</label>
-        <textarea id="reportInput" placeholder="Pega aquí el reporte del OLT..."></textarea>
-        <button onclick="buscarCuentas()">Localizar QRs</button>
+<div class="input-section">
+    <label>2. Cargar Listado de Clientes:</label>
+    <div style="display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap;">
+        <div style="flex: 1; min-width: 200px;">
+            <small>Opción A: Subir CSV de clientes</small>
+            <input type="file" id="clientCsvFile" accept=".csv" style="margin-top:5px;">
+        </div>
+        <div style="flex: 1; min-width: 200px;">
+            <small>Opción B: Pegar reporte</small>
+            <textarea id="reportInput" placeholder="Pega aquí el reporte..."></textarea>
+        </div>
     </div>
+    <button onclick="procesarBusqueda()" id="btnBuscar" style="background: var(--primary);">🔍 Localizar QRs</button>
+</div>
 
 <table id="resultTable">
     <thead>
