@@ -211,4 +211,25 @@ button:hover {
     .qr-badge {
         font-size: 16px; /* QR más grande para verlo rápido */
     }
+    #summaryStats {
+    border-top: 4px solid var(--primary);
+}
+
+#statsContent div {
+    transition: transform 0.2s;
+    cursor: default;
+}
+
+#statsContent div:hover {
+    transform: scale(1.05);
+    background-color: #e2e8f0 !important;
+}
+
+/* Botón secundario para limpiar */
+.btn-secondary {
+    background-color: var(--secondary);
+    margin-top: 10px;
+    font-size: 14px;
+    padding: 8px;
+}
 }
