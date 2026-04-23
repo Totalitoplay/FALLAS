@@ -233,3 +233,10 @@ button:hover {
     padding: 8px;
 }
 }
+#statsContent a:hover {
+    opacity: 0.8;
+}
+
+#statsContent div:active {
+    transform: scale(0.95); /* Efecto de pulsación en el celular */
+}
