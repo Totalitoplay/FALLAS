@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>R3 Scripts - Localizador de QR</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h2>Buscador de Cuentas e Inventario QR</h2>
+    
+    <div class="config">
+        <label>1. Cargar Base de Datos (CSV):</label>
+        <input type="file" id="csvFile" accept=".csv">
+    </div>
+
+    <div class="input-section">
+        <label>2. Pegar Reporte de Fallas:</label>
+        <textarea id="reportInput" placeholder="Pega aquí el reporte del OLT..."></textarea>
+        <button onclick="buscarCuentas()">Localizar QRs</button>
+    </div>
+
+<table id="resultTable">
+    <thead>
+        <tr>
+            <th onclick="ordenarTabla(0)" style="cursor:pointer">Cuenta ↕️</th>
+            <th onclick="ordenarTabla(1)" style="cursor:pointer">QR ↕️</th>
+            <th>Coordenadas</th>
+            <th>Mapa</th>
+        </tr>
+    </thead>
+    <tbody></tbody>
+</table>
+
+    <script src="app.js?v=99"></script>
+</body>
+</html>
