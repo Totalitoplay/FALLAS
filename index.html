@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    
     <h2>Buscador de Cuentas e Inventario QR</h2>
     
     <div class="config">
@@ -27,8 +28,13 @@
         </div>
     </div>
     <button onclick="procesarBusqueda()" id="btnBuscar">🔍 Localizar QRs</button>
+    <button onclick="limpiarTodo()" class="btn-secondary">🗑️ Limpiar Resultados</button>
 </div>
-
+<div id="summaryStats" class="config" style="display:none;">
+    <label>📊 Resumen de Impacto por QR:</label>
+    <div id="statsContent" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-top: 10px;">
+        </div>
+</div>
 <table id="resultTable">
     <thead>
         <tr>
