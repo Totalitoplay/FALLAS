@@ -3,7 +3,9 @@ let resultadosActuales = [];
 let ordenAscendente = true;
 
 window.onload = async function() {
+    const indicador = document.getElementById('inventarioStatus');
     try {
+        indicador.textContent = "⏳ Cargando inventario...";
         const respuesta = await fetch('inventario.csv?v=' + Date.now());
         const contenido = await respuesta.text();
         const lineas = contenido.split(/\r?\n/);
@@ -17,8 +19,12 @@ window.onload = async function() {
                 inventarioMap.set(cuentaLimpia, columnas);
             }
         });
-        console.log("Inventario cargado correctamente.");
+
+        indicador.textContent = `✅ Inventario listo — ${inventarioMap.size.toLocaleString()} registros`;
+        indicador.style.color = "#16a34a";
     } catch (e) { 
+        indicador.textContent = "❌ Error al cargar el inventario. Recarga la página.";
+        indicador.style.color = "#be123c";
         console.error("Error al cargar el CSV:", e); 
     }
 };
@@ -59,7 +65,7 @@ function ejecutarLocalizacion(textoBruto) {
     if (cuentasUnicas.length === 0) return alert("No se encontraron cuentas.");
 
     resultadosActuales = [];
-    let conteoQR = {}; // Objeto para contar repetidos
+    let conteoQR = {};
 
     cuentasUnicas.forEach(cuentaBuscada => {
         const buscar = cuentaBuscada.replace(/^0+/, '');
@@ -74,8 +80,6 @@ function ejecutarLocalizacion(textoBruto) {
                 lon: (fila[17] || "").replace(/"/g, "").trim(),
                 encontrado: true
             });
-
-            // Lógica de conteo
             conteoQR[qr] = (conteoQR[qr] || 0) + 1;
         } else {
             resultadosActuales.push({
@@ -86,7 +90,19 @@ function ejecutarLocalizacion(textoBruto) {
         }
     });
 
-    // Mostrar el resumen de los más repetidos
+    // Contador de resultados
+    const encontradas = resultadosActuales.filter(r => r.encontrado).length;
+    const noEncontradas = resultadosActuales.length - encontradas;
+    const contador = document.getElementById('resultCounter');
+    contador.style.display = "block";
+    contador.innerHTML = `
+        <span style="color:#16a34a; font-weight:700;">✅ Encontradas: ${encontradas}</span>
+        &nbsp;&nbsp;
+        <span style="color:#be123c; font-weight:700;">❌ No encontradas: ${noEncontradas}</span>
+        &nbsp;&nbsp;
+        <span style="color:#64748b;">Total: ${resultadosActuales.length}</span>
+    `;
+
     mostrarResumen(conteoQR);
 
     resultadosActuales.sort((a, b) => a.qr.localeCompare(b.qr, undefined, {numeric: true}));
@@ -103,7 +119,6 @@ function mostrarResumen(conteo) {
         contenedorStats.style.display = "block";
         
         contenido.innerHTML = ordenados.map(([qr, total]) => {
-            // Buscamos las coordenadas de este QR usando el primer resultado que lo contenga
             const datoCualquiera = resultadosActuales.find(r => r.qr === qr && r.encontrado);
             const linkMapa = datoCualquiera 
                 ? `https://www.google.com/maps/search/?api=1&query=${datoCualquiera.lat},${datoCualquiera.lon}`
@@ -132,21 +147,40 @@ function mostrarResumen(conteo) {
 
 function renderizarTabla(datos) {
     const tbody = document.querySelector("#resultTable tbody");
-    let html = "";
 
+    if (datos.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="5" style="text-align:center; padding: 40px; color: #64748b; font-size: 15px;">
+                    😕 Sin resultados para mostrar
+                </td>
+            </tr>`;
+        return;
+    }
+
+    let html = "";
     datos.forEach(res => {
         if (res.encontrado) {
             const urlMaps = `https://www.google.com/maps/search/?api=1&query=${res.lat},${res.lon}`;
             html += `
                 <tr>
+                    <td data-label="ESTADO"><span style="font-size:16px;" title="Encontrada">✅</span></td>
                     <td data-label="CUENTA"><b>${res.cuenta}</b></td>
-                    <td data-label="QR"><span class="qr-badge">${res.qr}</span></td>
+                    <td data-label="QR">
+                        <span class="qr-badge" 
+                              onclick="copiarQR('${res.qr}', this)" 
+                              title="Tap para copiar" 
+                              style="cursor:pointer;">
+                            ${res.qr}
+                        </span>
+                    </td>
                     <td data-label="COORD" style="font-size:10px;">${res.lat}, ${res.lon}</td>
                     <td data-label="ACCIÓN"><a href="${urlMaps}" target="_blank" class="btn-mapa">📍 Mapa</a></td>
                 </tr>`;
         } else {
             html += `
                 <tr class="no-encontrada">
+                    <td data-label="ESTADO"><span style="font-size:16px;" title="No encontrada">❌</span></td>
                     <td data-label="CUENTA">${res.cuenta}</td>
                     <td colspan="3">No encontrada en Inventario</td>
                 </tr>`;
@@ -155,21 +189,44 @@ function renderizarTabla(datos) {
     tbody.innerHTML = html;
 }
 
+function copiarQR(texto, elemento) {
+    navigator.clipboard.writeText(texto).then(() => {
+        const original = elemento.textContent;
+        elemento.textContent = "✅ Copiado";
+        elemento.style.background = "#dcfce7";
+        elemento.style.color = "#16a34a";
+        setTimeout(() => {
+            elemento.textContent = original;
+            elemento.style.background = "";
+            elemento.style.color = "";
+        }, 1500);
+    });
+}
+
 function ordenarTabla(columnaIndex) {
     if (resultadosActuales.length === 0) return;
     ordenAscendente = !ordenAscendente;
     resultadosActuales.sort((a, b) => {
-        let valA = columnaIndex === 0 ? a.cuenta : a.qr;
-        let valB = columnaIndex === 0 ? b.cuenta : b.qr;
-        return ordenAscendente ? valA.localeCompare(valB, undefined, {numeric: true}) : valB.localeCompare(valA, undefined, {numeric: true});
+        // Columna 0 = estado (encontrado primero), 1 = cuenta, 2 = qr
+        if (columnaIndex === 0) {
+            return ordenAscendente
+                ? Number(b.encontrado) - Number(a.encontrado)
+                : Number(a.encontrado) - Number(b.encontrado);
+        }
+        let valA = columnaIndex === 1 ? a.cuenta : a.qr;
+        let valB = columnaIndex === 1 ? b.cuenta : b.qr;
+        return ordenAscendente
+            ? valA.localeCompare(valB, undefined, {numeric: true})
+            : valB.localeCompare(valA, undefined, {numeric: true});
     });
     renderizarTabla(resultadosActuales);
 }
+
 function limpiarTodo() {
     document.getElementById('reportInput').value = "";
     document.getElementById('clientCsvFile').value = "";
     document.getElementById('summaryStats').style.display = "none";
+    document.getElementById('resultCounter').style.display = "none";
     document.querySelector("#resultTable tbody").innerHTML = "";
     resultadosActuales = [];
-    console.log("Panel limpiado.");
 }
