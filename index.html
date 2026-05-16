@@ -262,11 +262,15 @@
 <script src="https://unpkg.com/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="app.js?v=100"></script>
 <script>
+    // 1. VARIABLES GLOBALES (Declaradas una sola vez)
     var mapaIniciado = false;
     var map, pinActual;
-    const BASE_URL = '/kmz/';
+    const BASE_URL = '/kmz/'; 
+    
+    var arbolCarpetas = [];
+    var folderMap = {};
 
-    /* ── Tabs ── */
+    // 2. NAVEGACIÓN Y TABS
     function switchTab(tab) {
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('#view-lista, #view-mapa').forEach(v => v.classList.remove('active'));
@@ -278,141 +282,15 @@
         }
     }
 
-    /* ── Panel capas ── */
-    function togglePanelCapas() {
-        const panel = document.getElementById('panel-capas');
-        if (panel) {
-            const estaAbierto = panel.classList.contains('abierto');
-            if (estaAbierto) {
-                panel.classList.remove('abierto');
-                const buscador = document.getElementById('buscador-capas');
-                if (buscador) buscador.blur();
-                window.scrollTo(0, 0); 
-                document.body.scrollTop = 0;
-            } else {
-                panel.classList.add('abierto');
-            }
-        }
-        if (mapaIniciado && map) setTimeout(() => map.invalidateSize(), 300);
-    }
-
-    // Variables globales para KML recursivo
-    var arbolCarpetas = [];
-    var folderMap = {};
-    
-    function toggleFolder(uid, event) {
-        if (event) event.stopPropagation();
-        const sub = document.getElementById(uid);
-        const toggle = document.getElementById('toggle_' + uid);
-        if (sub) {
-            const isVisible = sub.style.display !== 'none';
-            sub.style.display = isVisible ? 'none' : 'block';
-            if (toggle) {
-                if (isVisible) toggle.classList.remove('abierto');
-                else toggle.classList.add('abierto');
-            }
-        }
-    }
-    
-    function toggleNivel(elemento) {
-        const visible = typeof elemento === 'boolean' ? elemento : elemento.checked;
-        if (typeof elemento !== 'boolean') {
-            const header = elemento.closest('.header-carpeta');
-            if (header && header.nextElementSibling && header.nextElementSibling.classList.contains('subcarpetas')) {
-                header.nextElementSibling.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = visible);
-            }
-        }
-        document.querySelectorAll('.cb-capa').forEach(cb => {
-            const uid = cb.dataset.uid;
-            const capa = folderMap[uid];
-            if (capa && capa.lg) { 
-                if (cb.checked) map.addLayer(capa.lg);
-                else map.removeLayer(capa.lg);
-            }
-        });
-    }
-    
-    function toggleTodasCapas(visible) {
-        document.querySelectorAll('.cb-capa').forEach(cb => cb.checked = visible);
-        toggleNivel(visible);
-    }
-    
-    function filtrarCapas(texto) {
-        const term = texto.toLowerCase().trim();
-        document.querySelectorAll('.header-carpeta').forEach(header => {
-            const nombre = header.querySelector('.nombre-capa').textContent.toLowerCase();
-            if (nombre.includes(term)) header.style.display = 'flex';
-            else header.style.display = 'none';
-        });
-        if (term !== '') {
-            const headers = Array.from(document.querySelectorAll('.header-carpeta')).reverse();
-            headers.forEach(header => {
-                const sub = header.nextElementSibling;
-                if (sub && sub.classList.contains('subcarpetas')) {
-                    const tieneHijoVisible = Array.from(sub.querySelectorAll('.header-carpeta')).some(h => h.style.display !== 'none');
-                    if (tieneHijoVisible) {
-                        header.style.display = 'flex'; sub.style.display = 'block';
-                        const toggle = header.querySelector('.carpeta-toggle');
-                        if(toggle) toggle.classList.add('abierto');
-                    }
-                }
-            });
-        } else {
-            document.querySelectorAll('.header-carpeta').forEach(h => h.style.display = 'flex');
-            document.querySelectorAll('.subcarpetas').forEach(sub => {
-                sub.style.display = 'none';
-                const toggle = document.getElementById('toggle_' + sub.id);
-                if(toggle) toggle.classList.remove('abierto');
-            });
-        }
-    }
-
-    function resaltarCarpeta(uid) {
-        const panel = document.getElementById('panel-capas');
-        if (panel && !panel.classList.contains('abierto')) {
-            panel.classList.add('abierto');
-            if (mapaIniciado && map) setTimeout(() => map.invalidateSize(), 300);
-        }
-        document.querySelectorAll('.header-carpeta').forEach(el => el.style.backgroundColor = 'transparent');
-        const cb = document.querySelector(`.cb-capa[data-uid="${uid}"]`);
-        if (!cb) return;
-        const header = cb.closest('.header-carpeta');
-        if (header) {
-            header.style.backgroundColor = '#dbeafe'; 
-            let nodoActual = header;
-            while (nodoActual) {
-                const contenedorSub = nodoActual.closest('.subcarpetas');
-                if (!contenedorSub) break;
-                contenedorSub.style.display = 'block';
-                const headerPadre = contenedorSub.previousElementSibling;
-                if (headerPadre && headerPadre.classList.contains('header-carpeta')) {
-                    const toggle = headerPadre.querySelector('.carpeta-toggle');
-                    if (toggle) toggle.classList.add('abierto');
-                }
-                nodoActual = headerPadre;
-            }
-            setTimeout(() => { header.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 300); 
-        }
-    }
-
-// Cambiamos la ruta base para apuntar a tus nuevos archivos
-    const BASE_URL = '/kmz/'; 
-
-    var arbolCarpetas = [];
-    var folderMap = {};
-
-    // 1. Inicialización y listeners actualizados para GeoJSON
+    // 3. INICIALIZACIÓN DEL MAPA GEOJSON
     function iniciarMapa() {
-        // preferCanvas: true es vital para pintar miles de elementos GeoJSON al instante sin lag
         map = L.map('map', { preferCanvas: true }).setView([31.740, -106.487], 12); 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
 
-        // Detectar cambio en el select de archivos del servidor
         document.getElementById('kmzSelect').addEventListener('change', function() { 
             if (this.value) cargarGeoJSONDesdeURL(this.value); 
         });
         
-        // Detectar subida de archivo local desde el celular
         document.getElementById('fileInput').addEventListener('change', async function(e) {
             const file = e.target.files[0]; if (!file) return;
             setPinInfo('Cargando ' + file.name + '...');
@@ -432,156 +310,8 @@
         ['latInput','lngInput'].forEach(id => { document.getElementById(id).addEventListener('keydown', e => { if (e.key === 'Enter') irManual(); }); });
     }
 
-    // 2. Descarga rápida del archivo GeoJSON desde tu servidor
-    async function cargarGeoJSONDesdeURL(filename) {
-        setPinInfo('Cargando ' + filename + '...');
-        try {
-            const r = await fetch(BASE_URL + filename);
-            if (!r.ok) throw new Error('HTTP ' + r.status);
-            const geojson = await r.json();
-            await procesarGeoJSON(geojson);
-            setPinInfo(filename + ' ✓');
-        } catch (err) { setPinInfo('Error: ' + err.message); }
-    }
-
-    // 3. El nuevo motor ultra rápido de renderizado GeoJSON (Reemplaza a parsearKMZ)
-    async function procesarGeoJSON(geojson) {
-        // Limpiar capas previas si las hay
-        Object.values(folderMap).forEach(data => map.removeLayer(data.lg));
-        folderMap = {};
-        arbolCarpetas = [];
-        const todosLosBounds = [];
-
-        // Agrupar elementos por su propiedad de Carpeta original
-        geojson.features.forEach(feature => {
-            // Mapshaper o QGIS suelen guardar la carpeta original en properties.Folder o properties.layer
-            const nombreCarpeta = feature.properties.Folder || feature.properties.layer || "Infraestructura General";
-            
-            if (!folderMap[nombreCarpeta]) {
-                folderMap[nombreCarpeta] = {
-                    lg: L.layerGroup().addTo(map),
-                    cantidadTotal: 0
-                };
-            }
-
-            // Creamos el feature de Leaflet interpretando estilos nativos del JSON
-            const capaFeature = L.geoJSON(feature, {
-                pointToLayer: function(geoJsonPoint, latlng) {
-                    // Detectar colores guardados en las propiedades del punto
-                    let color = feature.properties.iconColor || feature.properties.stroke || '#ea580c';
-                    
-                    // Si tiene un icono/forma definida en el archivo original
-                    if (feature.properties.iconHref || feature.properties.icon) {
-                        const iconUrl = feature.properties.iconHref || feature.properties.icon;
-                        const iconHtml = `<img src="${iconUrl}" style="width: 24px; height: 24px; object-fit: contain;">`;
-                        return L.marker(latlng, { icon: L.divIcon({ html: iconHtml, className: '', iconSize: [24, 24], iconAnchor: [12, 12] }) });
-                    }
-                    // Si no tiene icono, dibuja un círculo vectorial ligero
-                    return L.circleMarker(latlng, {
-                        radius: 5, fillColor: color, fillOpacity: 1, color: '#ffffff', weight: 1.5
-                    });
-                },
-                style: function(f) {
-                    // Estilo para líneas de fibra y polígonos
-                    let colorLine = f.properties.stroke || f.properties.color || '#2563eb';
-                    return { color: colorLine, weight: 3, fillOpacity: 0.3 };
-                },
-                onEachFeature: function(f, layer) {
-                    const name = f.properties.name || 'Punto sin nombre';
-                    const desc = f.properties.description || '';
-                    const popup = '<b>' + name + '</b>' + (desc ? '<br>' + desc : '');
-                    
-                    layer.bindPopup(popup);
-                    if (name) layer.bindTooltip(name, { sticky: true });
-
-                    // Conectar clic del mapa para resaltar la carpeta en el panel lateral
-                    layer.on('click', () => resaltarCarpeta(nombreCarpeta));
-
-                    // Registrar coordenadas válidas para auto-zoom
-                    if (layer.getLatLng) {
-                        todosLosBounds.push(layer.getLatLng());
-                    } else if (layer.getBounds) {
-                        const bounds = layer.getBounds();
-                        todosLosBounds.push(bounds.getNorthEast(), bounds.getSouthWest());
-                    }
-                }
-            });
-
-            folderMap[nombreCarpeta].lg.addLayer(capaFeature);
-            folderMap[nombreCarpeta].cantidadTotal++;
-        });
-
-        // Crear la lista simplificada de capas para el panel lateral
-        arbolCarpetas = Object.keys(folderMap).map(nombre => {
-            return {
-                uid: nombre, // El nombre sirve como ID único
-                nombre: nombre,
-                cantidadTotal: folderMap[nombre].cantidadTotal,
-                hijos: [] // Al ser JSON la estructura se aplana de forma más eficiente
-            };
-        });
-
-        // 🛡️ Filtro Inteligente de Encuadre de Cámara en Juárez
-        if (todosLosBounds.length > 0) {
-            if (pinActual && map.hasLayer(pinActual)) {
-                console.log("Manteniendo enfoque en el TP...");
-            } else {
-                let limitesLimpios = L.latLngBounds();
-                let centroJuarez = L.latLng(31.74, -106.48); 
-                let puntosEncontrados = 0;
-
-                todosLosBounds.forEach(p => {
-                    if (p && centroJuarez.distanceTo(p) < 100000) { // Menos de 100km a la redonda
-                        limitesLimpios.extend(p);
-                        puntosEncontrados++;
-                    }
-                });
-
-                if (puntosEncontrados > 0) {
-                    map.fitBounds(limitesLimpios, { padding: [30, 30], maxZoom: 17 });
-                }
-            }
-        }
-
-        renderizarPanelCapas();
-    }
-
-    // 4. Renderizado limpio del panel lateral de capas
-    function renderizarPanelCapas() {
-        const lista = document.getElementById('capas-lista');
-        lista.innerHTML = '';
-        
-        arbolCarpetas.forEach(carpeta => {
-            const div = document.createElement('div');
-            div.innerHTML = `
-                <div class="header-carpeta" data-uid="${carpeta.uid}" style="display:flex; align-items:center; padding: 10px 14px; cursor:pointer; border-bottom:1px solid #f1f5f9;">
-                    <input type="checkbox" checked class="cb-capa" data-uid="${carpeta.uid}" onchange="toggleNivel(this)" style="margin-right:10px;">
-                    <span style="font-size:12px; font-weight:600; color:#334155; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" class="nombre-capa">${carpeta.nombre}</span>
-                    <span style="font-size:11px; color:#94a3b8; margin-right:4px;">${carpeta.cantidadTotal} items</span>
-                </div>
-            `;
-            lista.appendChild(div);
-        });
-    }
-    
-
-
-    // Inicialización del Mapa
-    function iniciarMapa() {
-        map = L.map('map', { preferCanvas: true }).setView([31.740, -106.487], 12);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
-        document.getElementById('kmzSelect').addEventListener('change', function() { if (this.value) cargarKMZDesdeURL(this.value); });
-        document.getElementById('fileInput').addEventListener('change', async function(e) {
-            const file = e.target.files[0]; if (!file) return;
-            setPinInfo('Cargando ' + file.name + '...');
-            await parsearKMZ(await file.arrayBuffer());
-            setPinInfo(file.name + ' ✓');
-        });
-        document.getElementById('btn-ir').addEventListener('click', irManual);
-        ['latInput','lngInput'].forEach(id => { document.getElementById(id).addEventListener('keydown', e => { if (e.key === 'Enter') irManual(); }); });
-    }
-
     function setPinInfo(txt) { document.getElementById('mapa-pin-info').textContent = txt; }
+    
     function irManual() {
         const lat = parseFloat(document.getElementById('latInput').value);
         const lng = parseFloat(document.getElementById('lngInput').value);
@@ -604,7 +334,7 @@
                 })
             }).addTo(map);
             
-            const gmapsLink = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+            const gmapsLink = `https://www.google.com/maps/search/?api=1&query=$${lat},${lng}`;
             const popupHTML = `
                 <div style="text-align:center;">
                     <b>${label || ''}</b><br>
@@ -618,29 +348,172 @@
         }, 150);
     }
 
-    async function cargarKMZDesdeURL(filename) {
+    async function cargarGeoJSONDesdeURL(filename) {
         setPinInfo('Cargando ' + filename + '...');
         try {
             const r = await fetch(BASE_URL + filename);
             if (!r.ok) throw new Error('HTTP ' + r.status);
-            await parsearKMZ(await r.arrayBuffer());
+            const geojson = await r.json();
+            await procesarGeoJSON(geojson);
             setPinInfo(filename + ' ✓');
         } catch (err) { setPinInfo('Error: ' + err.message); }
     }
 
-    // ── Funciones del Modal del TP ──
+    // 4. LÓGICA DE PANEL Y CARPETAS
+    function togglePanelCapas() {
+        const panel = document.getElementById('panel-capas');
+        if (panel) {
+            const estaAbierto = panel.classList.contains('abierto');
+            if (estaAbierto) {
+                panel.classList.remove('abierto');
+                const buscador = document.getElementById('buscador-capas');
+                if (buscador) buscador.blur();
+                window.scrollTo(0, 0); 
+                document.body.scrollTop = 0;
+            } else {
+                panel.classList.add('abierto');
+            }
+        }
+        if (mapaIniciado && map) setTimeout(() => map.invalidateSize(), 300);
+    }
+
+    function toggleNivel(elemento) {
+        const visible = typeof elemento === 'boolean' ? elemento : elemento.checked;
+        const uid = elemento.dataset ? elemento.dataset.uid : null;
+        
+        if (uid && folderMap[uid] && folderMap[uid].lg) {
+            if (visible) map.addLayer(folderMap[uid].lg);
+            else map.removeLayer(folderMap[uid].lg);
+        }
+    }
+    
+    function toggleTodasCapas(visible) {
+        document.querySelectorAll('.cb-capa').forEach(cb => {
+            cb.checked = visible;
+            toggleNivel(cb);
+        });
+    }
+
+    function filtrarCapas(texto) {
+        const term = texto.toLowerCase().trim();
+        document.querySelectorAll('.header-carpeta').forEach(header => {
+            const nombre = header.querySelector('.nombre-capa').textContent.toLowerCase();
+            if (nombre.includes(term)) header.style.display = 'flex';
+            else header.style.display = 'none';
+        });
+    }
+
+    function resaltarCarpeta(uid) {
+        const panel = document.getElementById('panel-capas');
+        if (panel && !panel.classList.contains('abierto')) {
+            panel.classList.add('abierto');
+            if (mapaIniciado && map) setTimeout(() => map.invalidateSize(), 300);
+        }
+        document.querySelectorAll('.header-carpeta').forEach(el => el.style.backgroundColor = 'transparent');
+        const header = document.querySelector(`.header-carpeta[data-uid="${uid}"]`);
+        if (header) {
+            header.style.backgroundColor = '#dbeafe'; 
+            setTimeout(() => { header.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 300); 
+        }
+    }
+
+    function renderizarPanelCapas() {
+        const lista = document.getElementById('capas-lista');
+        lista.innerHTML = '';
+        
+        arbolCarpetas.forEach(carpeta => {
+            const div = document.createElement('div');
+            div.innerHTML = `
+                <div class="header-carpeta" data-uid="${carpeta.uid}" style="display:flex; align-items:center; padding: 10px 14px; cursor:pointer; border-bottom:1px solid #f1f5f9;">
+                    <input type="checkbox" checked class="cb-capa" data-uid="${carpeta.uid}" onchange="toggleNivel(this)" style="margin-right:10px;">
+                    <span style="font-size:12px; font-weight:600; color:#334155; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" class="nombre-capa">${carpeta.nombre}</span>
+                    <span style="font-size:11px; color:#94a3b8; margin-right:4px;">${carpeta.cantidadTotal} items</span>
+                </div>
+            `;
+            lista.appendChild(div);
+        });
+    }
+
+    // 5. PROCESAMIENTO NATIVO DE GEOJSON (MUY RÁPIDO)
+    async function procesarGeoJSON(geojson) {
+        Object.values(folderMap).forEach(data => map.removeLayer(data.lg));
+        folderMap = {};
+        arbolCarpetas = [];
+        const todosLosBounds = [];
+
+        if(!geojson.features) return;
+
+        geojson.features.forEach(feature => {
+            const nombreCarpeta = (feature.properties && (feature.properties.Folder || feature.properties.layer)) || "Infraestructura";
+            
+            if (!folderMap[nombreCarpeta]) {
+                folderMap[nombreCarpeta] = { lg: L.layerGroup().addTo(map), cantidadTotal: 0 };
+            }
+
+            const capaFeature = L.geoJSON(feature, {
+                pointToLayer: function(geoJsonPoint, latlng) {
+                    let color = (feature.properties && (feature.properties.iconColor || feature.properties.stroke)) || '#ea580c';
+                    
+                    if (feature.properties && (feature.properties.iconHref || feature.properties.icon)) {
+                        const iconUrl = feature.properties.iconHref || feature.properties.icon;
+                        const iconHtml = `<img src="${iconUrl}" style="width: 24px; height: 24px; object-fit: contain;">`;
+                        return L.marker(latlng, { icon: L.divIcon({ html: iconHtml, className: '', iconSize: [24, 24], iconAnchor: [12, 12] }) });
+                    }
+                    return L.circleMarker(latlng, { radius: 5, fillColor: color, fillOpacity: 1, color: '#ffffff', weight: 1.5 });
+                },
+                style: function(f) {
+                    let colorLine = (f.properties && (f.properties.stroke || f.properties.color)) || '#2563eb';
+                    return { color: colorLine, weight: 3, fillOpacity: 0.3 };
+                },
+                onEachFeature: function(f, layer) {
+                    const name = (f.properties && f.properties.name) || '';
+                    const desc = (f.properties && f.properties.description) || '';
+                    const popup = '<b>' + name + '</b>' + (desc ? '<br>' + desc : '');
+                    
+                    if(name || desc) layer.bindPopup(popup);
+                    if (name) layer.bindTooltip(name, { sticky: true });
+
+                    layer.on('click', () => resaltarCarpeta(nombreCarpeta));
+
+                    if (layer.getLatLng) { todosLosBounds.push(layer.getLatLng()); } 
+                    else if (layer.getBounds) { const bounds = layer.getBounds(); todosLosBounds.push(bounds.getNorthEast(), bounds.getSouthWest()); }
+                }
+            });
+
+            folderMap[nombreCarpeta].lg.addLayer(capaFeature);
+            folderMap[nombreCarpeta].cantidadTotal++;
+        });
+
+        arbolCarpetas = Object.keys(folderMap).map(nombre => ({ uid: nombre, nombre: nombre, cantidadTotal: folderMap[nombre].cantidadTotal, hijos: [] }));
+
+        if (todosLosBounds.length > 0) {
+            if (pinActual && map.hasLayer(pinActual)) {
+                // No mover la cámara si hay un pin seleccionado
+            } else {
+                let limitesLimpios = L.latLngBounds();
+                let centroJuarez = L.latLng(31.74, -106.48); 
+                let puntosEncontrados = 0;
+
+                todosLosBounds.forEach(p => {
+                    if (p && centroJuarez.distanceTo(p) < 100000) { limitesLimpios.extend(p); puntosEncontrados++; }
+                });
+
+                if (puntosEncontrados > 0) map.fitBounds(limitesLimpios, { padding: [30, 30], maxZoom: 17 });
+            }
+        }
+        renderizarPanelCapas();
+    }
+
+    // 6. MODAL Y TABLAS (Tu lógica original intacta)
     function abrirOpcionesTP(lat, lng, tpLabel) {
         document.activeElement.blur(); 
         document.getElementById('modal-tp-title').textContent = tpLabel || 'Ubicación seleccionada';
         
         const btnKmz = document.getElementById('btn-modal-kmz');
-        btnKmz.onclick = () => {
-            cerrarOpcionesTP();
-            irACoordenadas(lat, lng, tpLabel);
-        };
+        btnKmz.onclick = () => { cerrarOpcionesTP(); irACoordenadas(lat, lng, tpLabel); };
         
         const btnGmaps = document.getElementById('btn-modal-gmaps');
-        btnGmaps.href = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+        btnGmaps.href = `https://www.google.com/maps/search/?api=1&query=$${lat},${lng}`;
         btnGmaps.onclick = () => cerrarOpcionesTP();
 
         const btnCopy = document.getElementById('btn-modal-copy');
@@ -654,15 +527,11 @@
         document.getElementById('modal-opciones-tp').classList.add('activo');
     }
 
-    function cerrarOpcionesTP() {
-        const modal = document.getElementById('modal-opciones-tp');
-        modal.classList.remove('activo');
-    }
+    function cerrarOpcionesTP() { document.getElementById('modal-opciones-tp').classList.remove('activo'); }
 
-    /* ── Overrides app.js ── */
     function renderizarTabla(datos) {
         const tbody = document.querySelector('#resultTable tbody');
-        if (!tbody) return; // Protección anti-errores
+        if (!tbody) return; 
         
         if (!datos.length) {
             tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:40px;color:#64748b;">😕 Sin resultados</td></tr>';
@@ -682,9 +551,7 @@
                     <td data-label="COORD" style="font-size:11px;color:#64748b;">${res.lat}, ${res.lon}</td>
                 </tr>`;
             } else {
-                return `<tr class="no-encontrada">
-                    <td>❌</td><td>${res.cuenta}</td><td colspan="2">No encontrada en inventario</td>
-                </tr>`;
+                return `<tr class="no-encontrada"><td>❌</td><td>${res.cuenta}</td><td colspan="2">No encontrada en inventario</td></tr>`;
             }
         }).join('');
     }
