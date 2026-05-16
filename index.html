@@ -190,11 +190,11 @@
     <div id="mapa-toolbar">
         <select id="kmzSelect">
             <option value="">— KMZ —</option>
-            <option value="ALDAMA_1.kmz">Aldama 1</option>
-            <option value="ALDAMA_2.kmz">Aldama 2</option>
-            <option value="BUENOS_AIRES.kmz">BUENOS AIRES</option>
-            <option value="BUENOS_AIRES_2.kmz">BUENOS AIRES 2</option>
-            <option value="CARLOS_AMAYA.kmz">CARLOS AMAYA</option>
+            <option value="ALDAMA_1.geojson">Aldama 1</option>
+            <option value="ALDAMA_2.geojson">Aldama 2</option>
+            <option value="BUENOS_AIRES.geojson">BUENOS AIRES</option>
+            <option value="BUENOS_AIRES_2.geojson">BUENOS AIRES 2</option>
+            <option value="CARLOS_AMAYA.geojson">CARLOS AMAYA</option>
             <option value="GOMEZ_MORIN.kmz">GOMEZ MORIN</option>
             <option value="LOMAS_DE_MORELOS.kmz">LOMAS DE MORELOS</option>
             <option value="LOS_CIPRESES.kmz">LOS CIPRESES</option>
@@ -208,7 +208,7 @@
             <option value="TIERRA_NUEVA_2.kmz">TIERRA NUEVA 2</option>
             <option value="VERGEL.kmz">VERGEL/option>
         </select>
-        <input type="file" id="fileInput" accept=".kmz" title="Subir KMZ" style="font-size:11px;color:#94a3b8;width:110px;">
+        <input type="file" id="fileInput" accept=".geojson,.json" title="Subir GeoJSON" style="font-size:11px;color:#94a3b8;width:110px;">
         <input type="text" id="latInput" placeholder="Latitud">
         <input type="text" id="lngInput" placeholder="Longitud">
         <button id="btn-ir">📍 Ir</button>
@@ -395,209 +395,176 @@
         }
     }
 
+// Cambiamos la ruta base para apuntar a tus nuevos archivos
+    const BASE_URL = '/kmz/'; 
+
+    var arbolCarpetas = [];
+    var folderMap = {};
+
+    // 1. Inicialización y listeners actualizados para GeoJSON
+    function iniciarMapa() {
+        // preferCanvas: true es vital para pintar miles de elementos GeoJSON al instante sin lag
+        map = L.map('map', { preferCanvas: true }).setView([31.740, -106.487], 12); 
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
+
+        // Detectar cambio en el select de archivos del servidor
+        document.getElementById('kmzSelect').addEventListener('change', function() { 
+            if (this.value) cargarGeoJSONDesdeURL(this.value); 
+        });
+        
+        // Detectar subida de archivo local desde el celular
+        document.getElementById('fileInput').addEventListener('change', async function(e) {
+            const file = e.target.files[0]; if (!file) return;
+            setPinInfo('Cargando ' + file.name + '...');
+            
+            const lector = new FileReader();
+            lector.onload = async (event) => {
+                try {
+                    const geojson = JSON.parse(event.target.result);
+                    await procesarGeoJSON(geojson);
+                    setPinInfo(file.name + ' ✓');
+                } catch(err) { setPinInfo('Error al leer JSON'); }
+            };
+            lector.readAsText(file);
+        });
+        
+        document.getElementById('btn-ir').addEventListener('click', irManual);
+        ['latInput','lngInput'].forEach(id => { document.getElementById(id).addEventListener('keydown', e => { if (e.key === 'Enter') irManual(); }); });
+    }
+
+    // 2. Descarga rápida del archivo GeoJSON desde tu servidor
+    async function cargarGeoJSONDesdeURL(filename) {
+        setPinInfo('Cargando ' + filename + '...');
+        try {
+            const r = await fetch(BASE_URL + filename);
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            const geojson = await r.json();
+            await procesarGeoJSON(geojson);
+            setPinInfo(filename + ' ✓');
+        } catch (err) { setPinInfo('Error: ' + err.message); }
+    }
+
+    // 3. El nuevo motor ultra rápido de renderizado GeoJSON (Reemplaza a parsearKMZ)
+    async function procesarGeoJSON(geojson) {
+        // Limpiar capas previas si las hay
+        Object.values(folderMap).forEach(data => map.removeLayer(data.lg));
+        folderMap = {};
+        arbolCarpetas = [];
+        const todosLosBounds = [];
+
+        // Agrupar elementos por su propiedad de Carpeta original
+        geojson.features.forEach(feature => {
+            // Mapshaper o QGIS suelen guardar la carpeta original en properties.Folder o properties.layer
+            const nombreCarpeta = feature.properties.Folder || feature.properties.layer || "Infraestructura General";
+            
+            if (!folderMap[nombreCarpeta]) {
+                folderMap[nombreCarpeta] = {
+                    lg: L.layerGroup().addTo(map),
+                    cantidadTotal: 0
+                };
+            }
+
+            // Creamos el feature de Leaflet interpretando estilos nativos del JSON
+            const capaFeature = L.geoJSON(feature, {
+                pointToLayer: function(geoJsonPoint, latlng) {
+                    // Detectar colores guardados en las propiedades del punto
+                    let color = feature.properties.iconColor || feature.properties.stroke || '#ea580c';
+                    
+                    // Si tiene un icono/forma definida en el archivo original
+                    if (feature.properties.iconHref || feature.properties.icon) {
+                        const iconUrl = feature.properties.iconHref || feature.properties.icon;
+                        const iconHtml = `<img src="${iconUrl}" style="width: 24px; height: 24px; object-fit: contain;">`;
+                        return L.marker(latlng, { icon: L.divIcon({ html: iconHtml, className: '', iconSize: [24, 24], iconAnchor: [12, 12] }) });
+                    }
+                    // Si no tiene icono, dibuja un círculo vectorial ligero
+                    return L.circleMarker(latlng, {
+                        radius: 5, fillColor: color, fillOpacity: 1, color: '#ffffff', weight: 1.5
+                    });
+                },
+                style: function(f) {
+                    // Estilo para líneas de fibra y polígonos
+                    let colorLine = f.properties.stroke || f.properties.color || '#2563eb';
+                    return { color: colorLine, weight: 3, fillOpacity: 0.3 };
+                },
+                onEachFeature: function(f, layer) {
+                    const name = f.properties.name || 'Punto sin nombre';
+                    const desc = f.properties.description || '';
+                    const popup = '<b>' + name + '</b>' + (desc ? '<br>' + desc : '');
+                    
+                    layer.bindPopup(popup);
+                    if (name) layer.bindTooltip(name, { sticky: true });
+
+                    // Conectar clic del mapa para resaltar la carpeta en el panel lateral
+                    layer.on('click', () => resaltarCarpeta(nombreCarpeta));
+
+                    // Registrar coordenadas válidas para auto-zoom
+                    if (layer.getLatLng) {
+                        todosLosBounds.push(layer.getLatLng());
+                    } else if (layer.getBounds) {
+                        const bounds = layer.getBounds();
+                        todosLosBounds.push(bounds.getNorthEast(), bounds.getSouthWest());
+                    }
+                }
+            });
+
+            folderMap[nombreCarpeta].lg.addLayer(capaFeature);
+            folderMap[nombreCarpeta].cantidadTotal++;
+        });
+
+        // Crear la lista simplificada de capas para el panel lateral
+        arbolCarpetas = Object.keys(folderMap).map(nombre => {
+            return {
+                uid: nombre, // El nombre sirve como ID único
+                nombre: nombre,
+                cantidadTotal: folderMap[nombre].cantidadTotal,
+                hijos: [] // Al ser JSON la estructura se aplana de forma más eficiente
+            };
+        });
+
+        // 🛡️ Filtro Inteligente de Encuadre de Cámara en Juárez
+        if (todosLosBounds.length > 0) {
+            if (pinActual && map.hasLayer(pinActual)) {
+                console.log("Manteniendo enfoque en el TP...");
+            } else {
+                let limitesLimpios = L.latLngBounds();
+                let centroJuarez = L.latLng(31.74, -106.48); 
+                let puntosEncontrados = 0;
+
+                todosLosBounds.forEach(p => {
+                    if (p && centroJuarez.distanceTo(p) < 100000) { // Menos de 100km a la redonda
+                        limitesLimpios.extend(p);
+                        puntosEncontrados++;
+                    }
+                });
+
+                if (puntosEncontrados > 0) {
+                    map.fitBounds(limitesLimpios, { padding: [30, 30], maxZoom: 17 });
+                }
+            }
+        }
+
+        renderizarPanelCapas();
+    }
+
+    // 4. Renderizado limpio del panel lateral de capas
     function renderizarPanelCapas() {
         const lista = document.getElementById('capas-lista');
         lista.innerHTML = '';
-        function crearHTML(carpeta, nivel) {
+        
+        arbolCarpetas.forEach(carpeta => {
             const div = document.createElement('div');
-            const indent = nivel * 14; 
-            const tieneHijos = carpeta.hijos.length > 0;
             div.innerHTML = `
-                <div class="header-carpeta" style="display:flex; align-items:center; padding: 7px 14px; cursor:pointer; border-bottom:1px solid #f1f5f9; padding-left: ${14 + indent}px" onclick="toggleFolder('${carpeta.uid}', event)">
-                    <input type="checkbox" checked class="cb-capa" data-uid="${carpeta.uid}" onclick="event.stopPropagation()" onchange="toggleNivel(this)" style="margin-right:8px;">
-                    <span style="font-size:12px; font-weight:${nivel === 0 ? '700' : '600'}; color:#334155; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" class="nombre-capa">${carpeta.nombre}</span>
-                    <span style="font-size:10px; color:#94a3b8; margin-right:8px;">${carpeta.cantidadTotal}</span>
-                    ${tieneHijos ? `<span class="carpeta-toggle" id="toggle_${carpeta.uid}" style="font-size:10px; color:#94a3b8; transition: transform 0.2s;">▶</span>` : '<span style="width:10px"></span>'}
+                <div class="header-carpeta" data-uid="${carpeta.uid}" style="display:flex; align-items:center; padding: 10px 14px; cursor:pointer; border-bottom:1px solid #f1f5f9;">
+                    <input type="checkbox" checked class="cb-capa" data-uid="${carpeta.uid}" onchange="toggleNivel(this)" style="margin-right:10px;">
+                    <span style="font-size:12px; font-weight:600; color:#334155; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" class="nombre-capa">${carpeta.nombre}</span>
+                    <span style="font-size:11px; color:#94a3b8; margin-right:4px;">${carpeta.cantidadTotal} items</span>
                 </div>
-                ${tieneHijos ? `<div class="subcarpetas" id="${carpeta.uid}" style="display:none;"></div>` : ''}
             `;
-            if (tieneHijos) {
-                const subContenedor = div.querySelector('.subcarpetas');
-                carpeta.hijos.forEach(hijo => subContenedor.appendChild(crearHTML(hijo, nivel + 1)));
-            }
-            return div;
-        }
-        arbolCarpetas.forEach(raiz => lista.appendChild(crearHTML(raiz, 0)));
+            lista.appendChild(div);
+        });
     }
     
-    async function parsearKMZ(buffer) {
-        Object.values(folderMap).forEach(data => map.removeLayer(data.lg));
-        folderMap = {}; arbolCarpetas = [];
-        const todosLosBounds = [];
-        const zip = await JSZip.loadAsync(buffer);
-        const kmlFile = Object.values(zip.files).find(f => f.name.endsWith('.kml'));
-        if (!kmlFile) { alert('No se encontró KML'); return; }
-        const kmlDoc = new DOMParser().parseFromString(await kmlFile.async('string'), 'text/xml');
-        
-        const styles = {};
-        kmlDoc.querySelectorAll('Style').forEach(s => {
-            const id = s.getAttribute('id'); if (!id) return;
-            styles['#' + id] = {
-                iconHref: s.querySelector('IconStyle Icon href')?.textContent?.trim(),
-                iconColor: s.querySelector('IconStyle color')?.textContent?.trim(), // 🟢 ¡Extraemos el color del punto!
-                lineColor: s.querySelector('LineStyle color')?.textContent?.trim(),
-                polyColor: s.querySelector('PolyStyle color')?.textContent?.trim()
-            };
-        });
-        kmlDoc.querySelectorAll('StyleMap').forEach(sm => {
-            const id = sm.getAttribute('id');
-            const pair = [...sm.querySelectorAll('Pair')].find(p => p.querySelector('key')?.textContent === 'normal');
-            const url = pair?.querySelector('styleUrl')?.textContent?.trim();
-            if (id && url) styles['#' + id] = styles[url] || {};
-        });
-        
-        function hex(c) { return (!c || c.length < 8) ? null : '#' + c.slice(6,8) + c.slice(4,6) + c.slice(2,4); }
-        function coords(el) {
-            if (!el?.textContent) return [];
-            return el.textContent.trim().split(/\s+/).map(c => {
-                const p = c.split(',').map(Number);
-                return (p.length < 2 || isNaN(p[0]) || isNaN(p[1])) ? null : [p[1], p[0]];
-            }).filter(Boolean);
-        }
-        
-        function crearLayersDirectos(pm, style) {
-            const name = pm.querySelector(':scope > name')?.textContent?.trim() || '';
-            const desc = pm.querySelector(':scope > description')?.textContent?.trim() || '';
-            const popup = '<b>' + name + '</b>' + (desc ? '<br>' + desc : '');
-            const layers = [];
-            
-            pm.querySelectorAll('Polygon').forEach(poly => {
-                const c = coords(poly.querySelector('outerBoundaryIs coordinates'));
-                if (!c.length) return;
-                const color = hex(style.polyColor) || hex(style.lineColor) || '#3388ff';
-                const l = L.polygon(c, { color, fillColor: color, fillOpacity: 0.4 });
-                l.bindPopup(popup); if (name) l.bindTooltip(name, { sticky: true });
-                layers.push(l);
-            });
-            pm.querySelectorAll('LineString').forEach(line => {
-                const c = coords(line.querySelector('coordinates'));
-                if (!c.length) return;
-                const l = L.polyline(c, { color: hex(style.lineColor) || '#e74c3c', weight: 3 });
-                l.bindPopup(popup); if (name) l.bindTooltip(name, { sticky: true });
-                layers.push(l);
-            });
-            pm.querySelectorAll('Point').forEach(point => {
-                const c = coords(point.querySelector('coordinates'));
-                if (!c.length) return;
-                
-                let m;
-                // Detectamos el color exacto que pide el KMZ para este punto
-                let hexColor = style.iconColor ? hex(style.iconColor) : null;
-                let colorBase = hexColor || hex(style.lineColor) || '#ea580c'; // Naranja de seguridad
 
-                if (style.iconHref) {
-                    // Si trae una forma (imagen) y pide un color que NO sea blanco (#ffffff)
-                    if (hexColor && hexColor !== '#ffffff') {
-                        // 🌟 TRUCO PRO: Usamos la imagen como "máscara" y la rellenamos del color
-                        const iconHtml = `<div style="
-                            width: 22px; height: 22px; 
-                            background-color: ${hexColor}; 
-                            -webkit-mask: url('${style.iconHref}') no-repeat center / contain; 
-                            mask: url('${style.iconHref}') no-repeat center / contain;">
-                        </div>`;
-                        m = L.marker(c[0], { icon: L.divIcon({ html: iconHtml, className: '', iconSize: [22, 22], iconAnchor: [11, 11] }) });
-                    } else {
-                        // Si la imagen no lleva color (o es blanca), cargamos el ícono a todo color original
-                        const iconHtml = `<img src="${style.iconHref}" style="width: 24px; height: 24px; object-fit: contain;">`;
-                        m = L.marker(c[0], { icon: L.divIcon({ html: iconHtml, className: '', iconSize: [24, 24], iconAnchor: [12, 12] }) });
-                    }
-                } else {
-                    // Si el elemento KML de verdad no tiene forma, le ponemos nuestro círculo rápido
-                    m = L.circleMarker(c[0], {
-                        radius: 5, fillColor: colorBase, fillOpacity: 1, color: '#ffffff', weight: 1.5
-                    });
-                }
-                
-                m.bindPopup(popup); 
-                if (name) m.bindTooltip(name, { permanent: false, direction: 'top' });
-                layers.push(m);
-            });
-            return layers;
-        }
-        
-        function procesarCarpeta(nodoXML) {
-            const uid = 'uid_' + Math.random().toString(36).substring(2);
-            const nombre = nodoXML.querySelector(':scope > name')?.textContent?.trim() || 'Sin nombre';
-            const lgDirecto = L.layerGroup().addTo(map); 
-            let cantidadTotal = 0;
-            const hijos = [];
-            
-            nodoXML.querySelectorAll(':scope > Placemark').forEach(pm => {
-                const style = styles[pm.querySelector('styleUrl')?.textContent?.trim()] || {};
-                crearLayersDirectos(pm, style).forEach(l => {
-                    l.on('click', () => resaltarCarpeta(uid)); 
-                    lgDirecto.addLayer(l);
-                    cantidadTotal++;
-                    if (l.getLatLng) todosLosBounds.push(l.getLatLng());
-                    else if (l.getBounds) { const b = l.getBounds(); todosLosBounds.push(b.getNorthEast(), b.getSouthWest()); }
-                });
-            });
-            
-            folderMap[uid] = { lg: lgDirecto };
-            nodoXML.querySelectorAll(':scope > Folder').forEach(subNodo => {
-                const datosHijo = procesarCarpeta(subNodo);
-                if (datosHijo.cantidadTotal > 0) { hijos.push(datosHijo); cantidadTotal += datosHijo.cantidadTotal; }
-            });
-            return { uid, nombre, cantidadTotal, hijos };
-        }
-        
-        const raices = kmlDoc.querySelectorAll('Document > Folder, kml > Folder');
-        raices.forEach(r => {
-            const data = procesarCarpeta(r);
-            if(data.cantidadTotal > 0) arbolCarpetas.push(data);
-        });
-        
-// 🛡️ Filtro Inteligente de Coordenadas para el Auto-Zoom
-        if (todosLosBounds.length > 0) {
-            let limitesValidos = L.latLngBounds();
-            let referencia = null;
-            let puntosValidos = 0;
-
-            todosLosBounds.forEach(punto => {
-                // Validar que el punto sea real y no sea el centro del océano (0,0)
-                if (!punto || isNaN(punto.lat) || isNaN(punto.lng) || (punto.lat === 0 && punto.lng === 0)) return;
-
-                if (!referencia) {
-                    referencia = punto; // Usamos el primer poste válido como "Ancla"
-                    limitesValidos.extend(punto);
-                    puntosValidos++;
-                } else {
-                    // Ignorar para el zoom cualquier punto a más de ~500km de distancia del ancla
-                    if (Math.abs(punto.lat - referencia.lat) < 5 && Math.abs(punto.lng - referencia.lng) < 5) {
-                        limitesValidos.extend(punto);
-                        puntosValidos++;
-                    }
-                }
-            });
-
-            // Hacer el zoom solo con los puntos limpios
-            if (todosLosBounds.length > 0) {
-                        // Si ya tienes un PIN activo (buscaste un TP), NO muevas la cámara
-                        if (pinActual && map.hasLayer(pinActual)) {
-                            console.log("Manteniendo enfoque en el TP seleccionado...");
-                        } else {
-                            // Si no hay pin, buscamos el área de trabajo en Juárez
-                            let limitesLimpios = L.latLngBounds();
-                            let centroJuarez = L.latLng(31.74, -106.48); 
-                            let puntosEncontrados = 0;
-            
-                            todosLosBounds.forEach(p => {
-                                // Solo incluimos puntos que estén a menos de 100km de Juárez
-                                // Esto ignora automáticamente basura en 0,0 o coordenadas corruptas
-                                if (p && centroJuarez.distanceTo(p) < 100000) { 
-                                    limitesLimpios.extend(p);
-                                    puntosEncontrados++;
-                                }
-                            });
-            
-                            if (puntosEncontrados > 0) {
-                                map.fitBounds(limitesLimpios, { padding: [30, 30], maxZoom: 18 });
-                            }
-                        }
-                    }
-        }
-        renderizarPanelCapas();
-    }
 
     // Inicialización del Mapa
     function iniciarMapa() {
