@@ -596,7 +596,7 @@
         btnKmz.onclick = () => { cerrarOpcionesTP(); irACoordenadas(lat, lng, tpLabel); };
         
         const btnGmaps = document.getElementById('btn-modal-gmaps');
-        btnGmaps.href = `https://www.google.com/maps/search/?api=1&query=$${lat},${lng}`;
+        btnGmaps.href = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
         btnGmaps.onclick = () => cerrarOpcionesTP();
 
         const btnCopy = document.getElementById('btn-modal-copy');
