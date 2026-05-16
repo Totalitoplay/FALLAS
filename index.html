@@ -3,48 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>FALLAS FINDER</title>
+    <title>R3 Scripts</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
 
         :root {
-            --primary: #2563eb;
-            --secondary: #64748b;
-            --success: #16a34a;
-            --warning: #ea580c;
-            --bg: #f8fafc;
-            --card: #ffffff;
-            --slate-800: #1e293b;
+            --primary: #2563eb; --secondary: #64748b; --success: #16a34a;
+            --warning: #ea580c; --bg: #f8fafc; --card: #ffffff; --slate-800: #1e293b;
         }
 
         body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg);
-            color: var(--slate-800);
-            position: fixed; 
-            top: 0; left: 0; right: 0; bottom: 0;
-            width: 100%; 
-            height: 100dvh;
-            overscroll-behavior: none;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
+            font-family: 'Inter', sans-serif; background-color: var(--bg); color: var(--slate-800);
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100dvh;
+            overscroll-behavior: none; display: flex; flex-direction: column; overflow: hidden;
         }
 
         /* ── Topbar ── */
-        #topbar {
-            background: var(--slate-800); color: white; padding: 0 15px;
-            display: flex; align-items: center; gap: 12px; height: 56px; flex-shrink: 0;
-        }
+        #topbar { background: var(--slate-800); color: white; padding: 0 15px; display: flex; align-items: center; gap: 12px; height: 56px; flex-shrink: 0; }
         #topbar h1 { font-size: 16px; font-weight: 700; white-space: nowrap; }
         #inventarioStatus { font-size: 11px; color: #94a3b8; }
         #tabs { display: flex; gap: 4px; margin-left: auto; }
-        .tab-btn {
-            padding: 8px 16px; border-radius: 8px; border: none; font-size: 13px;
-            font-weight: 600; cursor: pointer; background: transparent; color: #94a3b8; transition: all 0.2s;
-        }
+        .tab-btn { padding: 8px 16px; border-radius: 8px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; background: transparent; color: #94a3b8; transition: all 0.2s; }
         .tab-btn:hover { background: #334155; color: white; }
         .tab-btn.active { background: var(--primary); color: white; }
 
@@ -100,6 +81,8 @@
         .btn-capas-accion { flex: 1; background: #f1f5f9; padding: 8px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 13px; }
         #capas-lista { flex: 1; overflow-y: auto; padding-bottom: 20px; }
         .header-carpeta:hover { background: #f8fafc; }
+        .carpeta-toggle { font-size: 10px; color: #94a3b8; transition: transform 0.2s; flex-shrink: 0; }
+        .carpeta-toggle.abierto { transform: rotate(90deg); }
         
         /* ── Modal (Action Sheet) CSS ── */
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(2px); display: none; justify-content: center; align-items: flex-end; z-index: 10000; opacity: 0; transition: opacity 0.25s ease; }
@@ -139,7 +122,7 @@
 <body>
 
 <div id="topbar">
-    <h1>⚡ FALLAS FINDER</h1>
+    <h1>⚡ R3 Scripts</h1>
     <span id="inventarioStatus">⏳ Cargando inventario...</span>
     <div id="tabs">
         <button class="tab-btn active" onclick="switchTab('lista')">📋 Lista</button>
@@ -190,25 +173,10 @@
     <div id="mapa-toolbar">
         <select id="kmzSelect">
             <option value="">— KMZ —</option>
-            <option value="ALDAMA_1.geojson">Aldama 1</option>
-            <option value="ALDAMA_2.geojson">Aldama 2</option>
-            <option value="BUENOS_AIRES.geojson">BUENOS AIRES</option>
-            <option value="BUENOS_AIRES_2.geojson">BUENOS AIRES 2</option>
-            <option value="CARLOS_AMAYA.geojson">CARLOS AMAYA</option>
-            <option value="GOMEZ_MORIN.kmz">GOMEZ MORIN</option>
-            <option value="LOMAS_DE_MORELOS.kmz">LOMAS DE MORELOS</option>
-            <option value="LOS_CIPRESES.kmz">LOS CIPRESES</option>
-            <option value="MAYORCA.kmz">MAYORCA</option>
-            <option value="NOGALES.kmz">NOGALES</option>
-            <option value="OASIS.kmz">OASIS</option>
-            <option value="SANTO_DOMINGO.kmz">SANTO DOMINGO</option>
-            <option value="THOMPSON.kmz">THOMPSON</option>
-            <option value="THOMPSON_2.kmz">THOMPSON 2</option>
-            <option value="TIERRA_NUEVA.kmz">TIERRA NUEVA</option>
-            <option value="TIERRA_NUEVA_2.kmz">TIERRA NUEVA 2</option>
-            <option value="VERGEL.kmz">VERGEL/option>
+            <option value="ALDAMA_1.kmz">Aldama 1</option>
+            <option value="ALDAMA_2.kmz">Aldama 2</option>
         </select>
-        <input type="file" id="fileInput" accept=".geojson,.json" title="Subir GeoJSON" style="font-size:11px;color:#94a3b8;width:110px;">
+        <input type="file" id="fileInput" accept=".kmz,.kml" title="Subir KMZ" style="font-size:11px;color:#94a3b8;width:110px;">
         <input type="text" id="latInput" placeholder="Latitud">
         <input type="text" id="lngInput" placeholder="Longitud">
         <button id="btn-ir">📍 Ir</button>
@@ -253,7 +221,6 @@
                 <span>📄</span> Copiar Código
             </button>
         </div>
-        
         <button class="btn-ghost" style="margin-top: 10px;" onclick="cerrarOpcionesTP()">Cancelar</button>
     </div>
 </div>
@@ -262,15 +229,14 @@
 <script src="https://unpkg.com/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="app.js?v=100"></script>
 <script>
-    // 1. VARIABLES GLOBALES (Declaradas una sola vez)
     var mapaIniciado = false;
     var map, pinActual;
-    const BASE_URL = '/kmz/'; 
-    
+    const BASE_URL = '/kmz/';
+
     var arbolCarpetas = [];
     var folderMap = {};
 
-    // 2. NAVEGACIÓN Y TABS
+    /* ── Tabs ── */
     function switchTab(tab) {
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('#view-lista, #view-mapa').forEach(v => v.classList.remove('active'));
@@ -282,36 +248,299 @@
         }
     }
 
-    // 3. INICIALIZACIÓN DEL MAPA GEOJSON
+    /* ── Panel capas ── */
+    function togglePanelCapas() {
+        const panel = document.getElementById('panel-capas');
+        if (panel) {
+            const estaAbierto = panel.classList.contains('abierto');
+            if (estaAbierto) {
+                panel.classList.remove('abierto');
+                const buscador = document.getElementById('buscador-capas');
+                if (buscador) buscador.blur();
+                window.scrollTo(0, 0); 
+                document.body.scrollTop = 0;
+            } else {
+                panel.classList.add('abierto');
+            }
+        }
+        if (mapaIniciado && map) setTimeout(() => map.invalidateSize(), 300);
+    }
+
+    function toggleFolder(uid, event) {
+        if (event) event.stopPropagation();
+        const sub = document.getElementById(uid);
+        const toggle = document.getElementById('toggle_' + uid);
+        if (sub) {
+            const isVisible = sub.style.display !== 'none';
+            sub.style.display = isVisible ? 'none' : 'block';
+            if (toggle) {
+                if (isVisible) toggle.classList.remove('abierto');
+                else toggle.classList.add('abierto');
+            }
+        }
+    }
+    
+    function toggleNivel(elemento) {
+        const visible = typeof elemento === 'boolean' ? elemento : elemento.checked;
+        if (typeof elemento !== 'boolean') {
+            const header = elemento.closest('.header-carpeta');
+            if (header && header.nextElementSibling && header.nextElementSibling.classList.contains('subcarpetas')) {
+                header.nextElementSibling.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = visible);
+            }
+        }
+        document.querySelectorAll('.cb-capa').forEach(cb => {
+            const uid = cb.dataset.uid;
+            const capa = folderMap[uid];
+            if (capa && capa.lg) { 
+                if (cb.checked) map.addLayer(capa.lg);
+                else map.removeLayer(capa.lg);
+            }
+        });
+    }
+    
+    function toggleTodasCapas(visible) {
+        document.querySelectorAll('.cb-capa').forEach(cb => cb.checked = visible);
+        toggleNivel(visible);
+    }
+    
+    function filtrarCapas(texto) {
+        const term = texto.toLowerCase().trim();
+        document.querySelectorAll('.header-carpeta').forEach(header => {
+            const nombre = header.querySelector('.nombre-capa').textContent.toLowerCase();
+            if (nombre.includes(term)) header.style.display = 'flex';
+            else header.style.display = 'none';
+        });
+        if (term !== '') {
+            const headers = Array.from(document.querySelectorAll('.header-carpeta')).reverse();
+            headers.forEach(header => {
+                const sub = header.nextElementSibling;
+                if (sub && sub.classList.contains('subcarpetas')) {
+                    const tieneHijoVisible = Array.from(sub.querySelectorAll('.header-carpeta')).some(h => h.style.display !== 'none');
+                    if (tieneHijoVisible) {
+                        header.style.display = 'flex'; sub.style.display = 'block';
+                        const toggle = header.querySelector('.carpeta-toggle');
+                        if(toggle) toggle.classList.add('abierto');
+                    }
+                }
+            });
+        } else {
+            document.querySelectorAll('.header-carpeta').forEach(h => h.style.display = 'flex');
+            document.querySelectorAll('.subcarpetas').forEach(sub => {
+                sub.style.display = 'none';
+                const toggle = document.getElementById('toggle_' + sub.id);
+                if(toggle) toggle.classList.remove('abierto');
+            });
+        }
+    }
+
+    function resaltarCarpeta(uid) {
+        const panel = document.getElementById('panel-capas');
+        if (panel && !panel.classList.contains('abierto')) {
+            panel.classList.add('abierto');
+            if (mapaIniciado && map) setTimeout(() => map.invalidateSize(), 300);
+        }
+        document.querySelectorAll('.header-carpeta').forEach(el => el.style.backgroundColor = 'transparent');
+        const cb = document.querySelector(`.cb-capa[data-uid="${uid}"]`);
+        if (!cb) return;
+        const header = cb.closest('.header-carpeta');
+        if (header) {
+            header.style.backgroundColor = '#dbeafe'; 
+            let nodoActual = header;
+            while (nodoActual) {
+                const contenedorSub = nodoActual.closest('.subcarpetas');
+                if (!contenedorSub) break;
+                contenedorSub.style.display = 'block';
+                const headerPadre = contenedorSub.previousElementSibling;
+                if (headerPadre && headerPadre.classList.contains('header-carpeta')) {
+                    const toggle = headerPadre.querySelector('.carpeta-toggle');
+                    if (toggle) toggle.classList.add('abierto');
+                }
+                nodoActual = headerPadre;
+            }
+            setTimeout(() => { header.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 300); 
+        }
+    }
+
+    function renderizarPanelCapas() {
+        const lista = document.getElementById('capas-lista');
+        lista.innerHTML = '';
+        function crearHTML(carpeta, nivel) {
+            const div = document.createElement('div');
+            const indent = nivel * 14; 
+            const tieneHijos = carpeta.hijos.length > 0;
+            div.innerHTML = `
+                <div class="header-carpeta" style="display:flex; align-items:center; padding: 7px 14px; cursor:pointer; border-bottom:1px solid #f1f5f9; padding-left: ${14 + indent}px" onclick="toggleFolder('${carpeta.uid}', event)">
+                    <input type="checkbox" checked class="cb-capa" data-uid="${carpeta.uid}" onclick="event.stopPropagation()" onchange="toggleNivel(this)" style="margin-right:8px;">
+                    <span style="font-size:12px; font-weight:${nivel === 0 ? '700' : '600'}; color:#334155; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" class="nombre-capa">${carpeta.nombre}</span>
+                    <span style="font-size:10px; color:#94a3b8; margin-right:8px;">${carpeta.cantidadTotal}</span>
+                    ${tieneHijos ? `<span class="carpeta-toggle" id="toggle_${carpeta.uid}">▶</span>` : '<span style="width:10px"></span>'}
+                </div>
+                ${tieneHijos ? `<div class="subcarpetas" id="${carpeta.uid}" style="display:none;"></div>` : ''}
+            `;
+            if (tieneHijos) {
+                const subContenedor = div.querySelector('.subcarpetas');
+                carpeta.hijos.forEach(hijo => subContenedor.appendChild(crearHTML(hijo, nivel + 1)));
+            }
+            return div;
+        }
+        arbolCarpetas.forEach(raiz => lista.appendChild(crearHTML(raiz, 0)));
+    }
+    
+    // Parser de KMZ Optimizado (Mantiene carpetas, ignora basura, carga colores)
+    async function parsearKMZ(buffer) {
+        Object.values(folderMap).forEach(data => map.removeLayer(data.lg));
+        folderMap = {}; arbolCarpetas = [];
+        const todosLosBounds = [];
+        const zip = await JSZip.loadAsync(buffer);
+        const kmlFile = Object.values(zip.files).find(f => f.name.endsWith('.kml'));
+        if (!kmlFile) { alert('No se encontró KML'); return; }
+        const kmlDoc = new DOMParser().parseFromString(await kmlFile.async('string'), 'text/xml');
+        
+        const styles = {};
+        kmlDoc.querySelectorAll('Style').forEach(s => {
+            const id = s.getAttribute('id'); if (!id) return;
+            styles['#' + id] = {
+                iconHref: s.querySelector('IconStyle Icon href')?.textContent?.trim(),
+                iconColor: s.querySelector('IconStyle color')?.textContent?.trim(),
+                lineColor: s.querySelector('LineStyle color')?.textContent?.trim(),
+                polyColor: s.querySelector('PolyStyle color')?.textContent?.trim()
+            };
+        });
+        kmlDoc.querySelectorAll('StyleMap').forEach(sm => {
+            const id = sm.getAttribute('id');
+            const pair = [...sm.querySelectorAll('Pair')].find(p => p.querySelector('key')?.textContent === 'normal');
+            const url = pair?.querySelector('styleUrl')?.textContent?.trim();
+            if (id && url) styles['#' + id] = styles[url] || {};
+        });
+        
+        function hex(c) { return (!c || c.length < 8) ? null : '#' + c.slice(6,8) + c.slice(4,6) + c.slice(2,4); }
+        function coords(el) {
+            if (!el?.textContent) return [];
+            return el.textContent.trim().split(/\s+/).map(c => {
+                const p = c.split(',').map(Number);
+                // Filtramos Null Island (0,0) y basura NaN
+                if (p.length < 2 || isNaN(p[0]) || isNaN(p[1]) || (p[0] === 0 && p[1] === 0)) return null;
+                return [p[1], p[0]];
+            }).filter(Boolean);
+        }
+        
+        function crearLayersDirectos(pm, style) {
+            const name = pm.querySelector(':scope > name')?.textContent?.trim() || '';
+            const desc = pm.querySelector(':scope > description')?.textContent?.trim() || '';
+            const popup = '<b>' + name + '</b>' + (desc ? '<br>' + desc : '');
+            const layers = [];
+            
+            pm.querySelectorAll('Polygon').forEach(poly => {
+                const c = coords(poly.querySelector('outerBoundaryIs coordinates'));
+                if (!c.length) return;
+                const color = hex(style.polyColor) || hex(style.lineColor) || '#3388ff';
+                const l = L.polygon(c, { color, fillColor: color, fillOpacity: 0.4 });
+                l.bindPopup(popup); if (name) l.bindTooltip(name, { sticky: true });
+                layers.push(l);
+            });
+            pm.querySelectorAll('LineString').forEach(line => {
+                const c = coords(line.querySelector('coordinates'));
+                if (!c.length) return;
+                const l = L.polyline(c, { color: hex(style.lineColor) || '#e74c3c', weight: 3 });
+                l.bindPopup(popup); if (name) l.bindTooltip(name, { sticky: true });
+                layers.push(l);
+            });
+            pm.querySelectorAll('Point').forEach(point => {
+                const c = coords(point.querySelector('coordinates'));
+                if (!c.length) return;
+                
+                let m;
+                let hexColor = style.iconColor ? hex(style.iconColor) : null;
+                let colorBase = hexColor || hex(style.lineColor) || '#ea580c';
+
+                if (style.iconHref) {
+                    if (hexColor && hexColor !== '#ffffff') {
+                        // Truco CSS para colorear formas originales
+                        const iconHtml = `<div style="width:22px; height:22px; background-color:${hexColor}; -webkit-mask:url('${style.iconHref}') no-repeat center / contain; mask:url('${style.iconHref}') no-repeat center / contain;"></div>`;
+                        m = L.marker(c[0], { icon: L.divIcon({ html: iconHtml, className: '', iconSize: [22, 22], iconAnchor: [11, 11] }) });
+                    } else {
+                        const iconHtml = `<img src="${style.iconHref}" style="width:24px; height:24px; object-fit:contain;">`;
+                        m = L.marker(c[0], { icon: L.divIcon({ html: iconHtml, className: '', iconSize: [24, 24], iconAnchor: [12, 12] }) });
+                    }
+                } else {
+                    m = L.circleMarker(c[0], { radius: 5, fillColor: colorBase, fillOpacity: 1, color: '#ffffff', weight: 1.5 });
+                }
+                
+                m.bindPopup(popup); if (name) m.bindTooltip(name, { permanent: false, direction: 'top' });
+                layers.push(m);
+            });
+            return layers;
+        }
+        
+        function procesarCarpeta(nodoXML) {
+            const uid = 'uid_' + Math.random().toString(36).substring(2);
+            const nombre = nodoXML.querySelector(':scope > name')?.textContent?.trim() || 'Sin nombre';
+            const lgDirecto = L.layerGroup().addTo(map); 
+            let cantidadTotal = 0;
+            const hijos = [];
+            
+            nodoXML.querySelectorAll(':scope > Placemark').forEach(pm => {
+                const style = styles[pm.querySelector('styleUrl')?.textContent?.trim()] || {};
+                crearLayersDirectos(pm, style).forEach(l => {
+                    l.on('click', () => resaltarCarpeta(uid)); 
+                    lgDirecto.addLayer(l);
+                    cantidadTotal++;
+                    if (l.getLatLng) todosLosBounds.push(l.getLatLng());
+                    else if (l.getBounds) { const b = l.getBounds(); todosLosBounds.push(b.getNorthEast(), b.getSouthWest()); }
+                });
+            });
+            
+            folderMap[uid] = { lg: lgDirecto };
+            nodoXML.querySelectorAll(':scope > Folder').forEach(subNodo => {
+                const datosHijo = procesarCarpeta(subNodo);
+                if (datosHijo.cantidadTotal > 0) { hijos.push(datosHijo); cantidadTotal += datosHijo.cantidadTotal; }
+            });
+            return { uid, nombre, cantidadTotal, hijos };
+        }
+        
+        const raices = kmlDoc.querySelectorAll('Document > Folder, kml > Folder');
+        raices.forEach(r => {
+            const data = procesarCarpeta(r);
+            if(data.cantidadTotal > 0) arbolCarpetas.push(data);
+        });
+        
+        // 🛡️ Filtro Inteligente de Encuadre en Juárez (Evita viajar a África)
+        if (todosLosBounds.length > 0) {
+            if (pinActual && map.hasLayer(pinActual)) {
+                console.log("Manteniendo enfoque en el TP...");
+            } else {
+                let limitesLimpios = L.latLngBounds();
+                let centroJuarez = L.latLng(31.74, -106.48); 
+                let puntosEncontrados = 0;
+
+                todosLosBounds.forEach(p => {
+                    if (p && centroJuarez.distanceTo(p) < 100000) { 
+                        limitesLimpios.extend(p);
+                        puntosEncontrados++;
+                    }
+                });
+                if (puntosEncontrados > 0) map.fitBounds(limitesLimpios, { padding: [30, 30], maxZoom: 17 });
+            }
+        }
+        renderizarPanelCapas();
+    }
+
+    // Inicialización del Mapa
     function iniciarMapa() {
         map = L.map('map', { preferCanvas: true }).setView([31.740, -106.487], 12); 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
-
-        document.getElementById('kmzSelect').addEventListener('change', function() { 
-            if (this.value) cargarGeoJSONDesdeURL(this.value); 
-        });
-        
+        document.getElementById('kmzSelect').addEventListener('change', function() { if (this.value) cargarKMZDesdeURL(this.value); });
         document.getElementById('fileInput').addEventListener('change', async function(e) {
             const file = e.target.files[0]; if (!file) return;
             setPinInfo('Cargando ' + file.name + '...');
-            
-            const lector = new FileReader();
-            lector.onload = async (event) => {
-                try {
-                    const geojson = JSON.parse(event.target.result);
-                    await procesarGeoJSON(geojson);
-                    setPinInfo(file.name + ' ✓');
-                } catch(err) { setPinInfo('Error al leer JSON'); }
-            };
-            lector.readAsText(file);
+            await parsearKMZ(await file.arrayBuffer());
+            setPinInfo(file.name + ' ✓');
         });
-        
         document.getElementById('btn-ir').addEventListener('click', irManual);
         ['latInput','lngInput'].forEach(id => { document.getElementById(id).addEventListener('keydown', e => { if (e.key === 'Enter') irManual(); }); });
     }
 
     function setPinInfo(txt) { document.getElementById('mapa-pin-info').textContent = txt; }
-    
     function irManual() {
         const lat = parseFloat(document.getElementById('latInput').value);
         const lng = parseFloat(document.getElementById('lngInput').value);
@@ -348,163 +577,17 @@
         }, 150);
     }
 
-    async function cargarGeoJSONDesdeURL(filename) {
+    async function cargarKMZDesdeURL(filename) {
         setPinInfo('Cargando ' + filename + '...');
         try {
             const r = await fetch(BASE_URL + filename);
             if (!r.ok) throw new Error('HTTP ' + r.status);
-            const geojson = await r.json();
-            await procesarGeoJSON(geojson);
+            await parsearKMZ(await r.arrayBuffer());
             setPinInfo(filename + ' ✓');
         } catch (err) { setPinInfo('Error: ' + err.message); }
     }
 
-    // 4. LÓGICA DE PANEL Y CARPETAS
-    function togglePanelCapas() {
-        const panel = document.getElementById('panel-capas');
-        if (panel) {
-            const estaAbierto = panel.classList.contains('abierto');
-            if (estaAbierto) {
-                panel.classList.remove('abierto');
-                const buscador = document.getElementById('buscador-capas');
-                if (buscador) buscador.blur();
-                window.scrollTo(0, 0); 
-                document.body.scrollTop = 0;
-            } else {
-                panel.classList.add('abierto');
-            }
-        }
-        if (mapaIniciado && map) setTimeout(() => map.invalidateSize(), 300);
-    }
-
-    function toggleNivel(elemento) {
-        const visible = typeof elemento === 'boolean' ? elemento : elemento.checked;
-        const uid = elemento.dataset ? elemento.dataset.uid : null;
-        
-        if (uid && folderMap[uid] && folderMap[uid].lg) {
-            if (visible) map.addLayer(folderMap[uid].lg);
-            else map.removeLayer(folderMap[uid].lg);
-        }
-    }
-    
-    function toggleTodasCapas(visible) {
-        document.querySelectorAll('.cb-capa').forEach(cb => {
-            cb.checked = visible;
-            toggleNivel(cb);
-        });
-    }
-
-    function filtrarCapas(texto) {
-        const term = texto.toLowerCase().trim();
-        document.querySelectorAll('.header-carpeta').forEach(header => {
-            const nombre = header.querySelector('.nombre-capa').textContent.toLowerCase();
-            if (nombre.includes(term)) header.style.display = 'flex';
-            else header.style.display = 'none';
-        });
-    }
-
-    function resaltarCarpeta(uid) {
-        const panel = document.getElementById('panel-capas');
-        if (panel && !panel.classList.contains('abierto')) {
-            panel.classList.add('abierto');
-            if (mapaIniciado && map) setTimeout(() => map.invalidateSize(), 300);
-        }
-        document.querySelectorAll('.header-carpeta').forEach(el => el.style.backgroundColor = 'transparent');
-        const header = document.querySelector(`.header-carpeta[data-uid="${uid}"]`);
-        if (header) {
-            header.style.backgroundColor = '#dbeafe'; 
-            setTimeout(() => { header.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 300); 
-        }
-    }
-
-    function renderizarPanelCapas() {
-        const lista = document.getElementById('capas-lista');
-        lista.innerHTML = '';
-        
-        arbolCarpetas.forEach(carpeta => {
-            const div = document.createElement('div');
-            div.innerHTML = `
-                <div class="header-carpeta" data-uid="${carpeta.uid}" style="display:flex; align-items:center; padding: 10px 14px; cursor:pointer; border-bottom:1px solid #f1f5f9;">
-                    <input type="checkbox" checked class="cb-capa" data-uid="${carpeta.uid}" onchange="toggleNivel(this)" style="margin-right:10px;">
-                    <span style="font-size:12px; font-weight:600; color:#334155; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" class="nombre-capa">${carpeta.nombre}</span>
-                    <span style="font-size:11px; color:#94a3b8; margin-right:4px;">${carpeta.cantidadTotal} items</span>
-                </div>
-            `;
-            lista.appendChild(div);
-        });
-    }
-
-    // 5. PROCESAMIENTO NATIVO DE GEOJSON (MUY RÁPIDO)
-    async function procesarGeoJSON(geojson) {
-        Object.values(folderMap).forEach(data => map.removeLayer(data.lg));
-        folderMap = {};
-        arbolCarpetas = [];
-        const todosLosBounds = [];
-
-        if(!geojson.features) return;
-
-        geojson.features.forEach(feature => {
-            const nombreCarpeta = (feature.properties && (feature.properties.Folder || feature.properties.layer)) || "Infraestructura";
-            
-            if (!folderMap[nombreCarpeta]) {
-                folderMap[nombreCarpeta] = { lg: L.layerGroup().addTo(map), cantidadTotal: 0 };
-            }
-
-            const capaFeature = L.geoJSON(feature, {
-                pointToLayer: function(geoJsonPoint, latlng) {
-                    let color = (feature.properties && (feature.properties.iconColor || feature.properties.stroke)) || '#ea580c';
-                    
-                    if (feature.properties && (feature.properties.iconHref || feature.properties.icon)) {
-                        const iconUrl = feature.properties.iconHref || feature.properties.icon;
-                        const iconHtml = `<img src="${iconUrl}" style="width: 24px; height: 24px; object-fit: contain;">`;
-                        return L.marker(latlng, { icon: L.divIcon({ html: iconHtml, className: '', iconSize: [24, 24], iconAnchor: [12, 12] }) });
-                    }
-                    return L.circleMarker(latlng, { radius: 5, fillColor: color, fillOpacity: 1, color: '#ffffff', weight: 1.5 });
-                },
-                style: function(f) {
-                    let colorLine = (f.properties && (f.properties.stroke || f.properties.color)) || '#2563eb';
-                    return { color: colorLine, weight: 3, fillOpacity: 0.3 };
-                },
-                onEachFeature: function(f, layer) {
-                    const name = (f.properties && f.properties.name) || '';
-                    const desc = (f.properties && f.properties.description) || '';
-                    const popup = '<b>' + name + '</b>' + (desc ? '<br>' + desc : '');
-                    
-                    if(name || desc) layer.bindPopup(popup);
-                    if (name) layer.bindTooltip(name, { sticky: true });
-
-                    layer.on('click', () => resaltarCarpeta(nombreCarpeta));
-
-                    if (layer.getLatLng) { todosLosBounds.push(layer.getLatLng()); } 
-                    else if (layer.getBounds) { const bounds = layer.getBounds(); todosLosBounds.push(bounds.getNorthEast(), bounds.getSouthWest()); }
-                }
-            });
-
-            folderMap[nombreCarpeta].lg.addLayer(capaFeature);
-            folderMap[nombreCarpeta].cantidadTotal++;
-        });
-
-        arbolCarpetas = Object.keys(folderMap).map(nombre => ({ uid: nombre, nombre: nombre, cantidadTotal: folderMap[nombre].cantidadTotal, hijos: [] }));
-
-        if (todosLosBounds.length > 0) {
-            if (pinActual && map.hasLayer(pinActual)) {
-                // No mover la cámara si hay un pin seleccionado
-            } else {
-                let limitesLimpios = L.latLngBounds();
-                let centroJuarez = L.latLng(31.74, -106.48); 
-                let puntosEncontrados = 0;
-
-                todosLosBounds.forEach(p => {
-                    if (p && centroJuarez.distanceTo(p) < 100000) { limitesLimpios.extend(p); puntosEncontrados++; }
-                });
-
-                if (puntosEncontrados > 0) map.fitBounds(limitesLimpios, { padding: [30, 30], maxZoom: 17 });
-            }
-        }
-        renderizarPanelCapas();
-    }
-
-    // 6. MODAL Y TABLAS (Tu lógica original intacta)
+    // ── Funciones del Modal del TP ──
     function abrirOpcionesTP(lat, lng, tpLabel) {
         document.activeElement.blur(); 
         document.getElementById('modal-tp-title').textContent = tpLabel || 'Ubicación seleccionada';
@@ -529,6 +612,7 @@
 
     function cerrarOpcionesTP() { document.getElementById('modal-opciones-tp').classList.remove('activo'); }
 
+    /* ── Renderizado de Tablas ── */
     function renderizarTabla(datos) {
         const tbody = document.querySelector('#resultTable tbody');
         if (!tbody) return; 
